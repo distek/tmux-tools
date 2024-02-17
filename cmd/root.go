@@ -26,10 +26,6 @@ func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
 }
 
-func init() {
-	cobra.OnInitialize(initConfig)
-}
-
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	if flagConfigFile != "" {
@@ -56,12 +52,7 @@ func initConfig() {
 	}
 }
 
-func init() {
-	rootCmd.PersistentFlags().StringVar(&flagConfigFile, "config", "", "config file (default: $HOME/.config/tmux/tools/tmux-tools.yaml)")
-
-	rootCmd.PersistentFlags().StringVarP(&flagTmuxSockPath, "socket-path", "S", "", "tmux socket path (See tmux docs)")
-	rootCmd.PersistentFlags().StringVarP(&flagTmuxSockName, "socket-name", "L", "", "tmux socket name (See tmux docs)")
-
+func initGlobalArgs() {
 	if lib.GlobalArgs == nil {
 		lib.GlobalArgs = make(map[string]string, 1)
 	}
@@ -73,4 +64,15 @@ func init() {
 	if flagTmuxSockPath != "" {
 		lib.GlobalArgs["-S"] = flagTmuxSockPath
 	}
+}
+
+func init() {
+	cobra.OnInitialize(initConfig)
+
+	rootCmd.PersistentFlags().StringVar(&flagConfigFile, "config", "", "config file (default: $HOME/.config/tmux/tools/tmux-tools.yaml)")
+
+	rootCmd.PersistentFlags().StringVarP(&flagTmuxSockPath, "socket-path", "S", "", "tmux socket path (See tmux docs)")
+	rootCmd.PersistentFlags().StringVarP(&flagTmuxSockName, "socket-name", "L", "", "tmux socket name (See tmux docs)")
+
+	initGlobalArgs()
 }

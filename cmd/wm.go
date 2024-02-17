@@ -10,10 +10,27 @@ import (
 )
 
 var wmCmd = &cobra.Command{
-	Use:   "wm",
-	Short: "Window manager",
+	Use:       "wm",
+	Short:     "Window manager",
+	ValidArgs: []string{"left", "down", "up", "right"},
 	Run: func(cmd *cobra.Command, args []string) {
-		_ = cmd.Usage()
+		if len(args) != 1 {
+			log.Printf("Provide only one of %v", cmd.ValidArgs)
+			_ = cmd.Usage()
+			os.Exit(1)
+		}
+
+		dir := args[0]
+
+		switch dir {
+		case "left", "down", "up", "right":
+		default:
+			log.Printf("Provide only one of %v", cmd.ValidArgs)
+			_ = cmd.Usage()
+			os.Exit(1)
+		}
+
+		moveWindowInDir(dir)
 	},
 }
 
@@ -166,57 +183,12 @@ func moveWindowInDir(dir string) {
 	_ = lib.SelectPane(currPane)
 
 	lib.UsePaneCache = false
-
-	// TODO: checking neighbors is expensive and this doesn't work.
-	// if allColumns() && !allRows() {
-	// 	_, _, _ = lib.Tmux(lib.GlobalArgs, "select-layout", map[string]string{
-	// 		"even-vertical": "",
-	// 	}, "")
-	// } else if allRows() && !allColumns() {
-	// 	_, _, _ = lib.Tmux(lib.GlobalArgs, "select-layout", map[string]string{
-	// 		"even-horizontal": "",
-	// 	}, "")
-	// }
-}
-
-var wmLeftCmd = &cobra.Command{
-	Use:   "left",
-	Short: "Move window left",
-	Run: func(cmd *cobra.Command, args []string) {
-		moveWindowInDir("left")
-	},
-}
-
-var wmDownCmd = &cobra.Command{
-	Use:   "down",
-	Short: "Move window down",
-	Run: func(cmd *cobra.Command, args []string) {
-		moveWindowInDir("down")
-	},
-}
-
-var wmUpCmd = &cobra.Command{
-	Use:   "up",
-	Short: "Move window up",
-	Run: func(cmd *cobra.Command, args []string) {
-		moveWindowInDir("up")
-	},
-}
-
-var wmRightCmd = &cobra.Command{
-	Use:   "right",
-	Short: "Move window right",
-	Run: func(cmd *cobra.Command, args []string) {
-		moveWindowInDir("right")
-	},
 }
 
 func init() {
 	rootCmd.AddCommand(wmCmd)
-	wmCmd.AddCommand(wmLeftCmd)
-	wmCmd.AddCommand(wmDownCmd)
-	wmCmd.AddCommand(wmUpCmd)
-	wmCmd.AddCommand(wmRightCmd)
+
+	initGlobalArgs()
 
 	lib.UsePaneCache = false
 }

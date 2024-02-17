@@ -68,6 +68,8 @@ var nestCmd = &cobra.Command{
     The default sock path will be "$XDG_CACHE_DIR/tmux-tools/nested/$(pwd)/socket"
 `,
 	Run: func(cmd *cobra.Command, args []string) {
+		initGlobalArgs()
+
 		// If user did not provide a socket address, make one
 		if flagTmuxSockPath == "" {
 			flagTmuxSockPath = nestGetDefault()
