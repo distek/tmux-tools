@@ -13,7 +13,10 @@ type Pane struct {
 	Width  int    `json:"width"`
 	Height int    `json:"height"`
 	Active bool   `json:"active"`
+	TtyFd  string `json:"ttyfd"`
 }
+
+var paneFmtLine = "\"#{pane_id},#{pane_tty},#{pane_index},#{pane_width},#{pane_height},#{pane_active}\""
 
 func parsePaneLine(line string) (Pane, error) {
 	var pane Pane
@@ -21,32 +24,34 @@ func parsePaneLine(line string) (Pane, error) {
 
 	split := strings.Split(line, ",")
 
-	if len(split) != 5 {
+	if len(split) != 6 {
 		return Pane{}, fmt.Errorf("lib: parsePaneLine: strings.Split: split: split length != 5: line=%s", line)
 	}
 
 	// ID
 	pane.ID = split[0]
 
+	pane.TtyFd = split[1]
+
 	// index
-	pane.Index, err = strconv.Atoi(split[1])
+	pane.Index, err = strconv.Atoi(split[2])
 	if err != nil {
 		return Pane{}, fmt.Errorf("lib: parsePaneLine: strconv.Atoi: pane.Index: %s", err)
 	}
 
 	// width
-	pane.Width, err = strconv.Atoi(split[2])
+	pane.Width, err = strconv.Atoi(split[3])
 	if err != nil {
 		return Pane{}, fmt.Errorf("lib: parsePaneLine: strconv.Atoi: pane.Width: %s", err)
 	}
 
 	// height
-	pane.Height, err = strconv.Atoi(split[3])
+	pane.Height, err = strconv.Atoi(split[4])
 	if err != nil {
 		return Pane{}, fmt.Errorf("lib: parsePaneLine: strconv.Atoi: pane.Height: %s", err)
 	}
 
-	pane.Active = split[4] == "1"
+	pane.Active = split[5] == "1"
 
 	return pane, nil
 }
@@ -59,7 +64,7 @@ func GetPanes() ([]Pane, error) {
 	UsePaneCache = true
 
 	o, e, err := Tmux(GlobalArgs, "list-panes", map[string]string{
-		"-F": "\"#{pane_id},#{pane_index},#{pane_width},#{pane_height},#{pane_active}\"",
+		"-F": paneFmtLine,
 	}, "")
 
 	if err != nil {
@@ -123,7 +128,7 @@ func GetPaneInDir(pane Pane, dir string) (Pane, bool, error) {
 	o, e, err := Tmux(GlobalArgs, "display-message", map[string]string{
 		"-p": "",
 		"-t": fmt.Sprintf("{%s-of}", dir),
-		"-F": "\"#{pane_id},#{pane_index},#{pane_width},#{pane_height},#{pane_active}\"",
+		"-F": paneFmtLine,
 	}, "")
 	if err != nil {
 		return Pane{}, false, fmt.Errorf("lib: GetPaneInDir: Tmux: command failed: err=%s, stdout=%s, stderr=%s", err, o, e)
@@ -150,7 +155,7 @@ func GetPaneInDir(pane Pane, dir string) (Pane, bool, error) {
 func GetCurrentPane() (Pane, error) {
 	o, e, err := Tmux(GlobalArgs, "display-message", map[string]string{
 		"-p": "",
-		"-F": "\"#{pane_id},#{pane_index},#{pane_width},#{pane_height},#{pane_active}\"",
+		"-F": paneFmtLine,
 	}, "")
 
 	if err != nil {
