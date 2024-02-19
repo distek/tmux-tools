@@ -3,6 +3,7 @@ package lib
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -14,9 +15,13 @@ type Pane struct {
 	Height int    `json:"height"`
 	Active bool   `json:"active"`
 	TtyFd  string `json:"ttyfd"`
+	PID    int    `json:"pid"`
 }
 
-var paneFmtLine = "\"#{pane_id},#{pane_tty},#{pane_index},#{pane_width},#{pane_height},#{pane_active}\""
+var (
+	paneFmtLine      = "\"#{pane_id},#{pane_tty},#{pane_pid},#{pane_index},#{pane_width},#{pane_height},#{pane_active}\""
+	paneEmtpyFmtLine = ",,,,,,"
+)
 
 func parsePaneLine(line string) (Pane, error) {
 	var pane Pane
@@ -24,34 +29,41 @@ func parsePaneLine(line string) (Pane, error) {
 
 	split := strings.Split(line, ",")
 
-	if len(split) != 6 {
+	if len(split) != 7 {
 		return Pane{}, fmt.Errorf("lib: parsePaneLine: strings.Split: split: split length != 5: line=%s", line)
 	}
 
 	// ID
 	pane.ID = split[0]
 
+	// tty
 	pane.TtyFd = split[1]
 
 	// index
-	pane.Index, err = strconv.Atoi(split[2])
+	pane.PID, err = strconv.Atoi(split[2])
+	if err != nil {
+		return Pane{}, fmt.Errorf("lib: parsePaneLine: strconv.Atoi: pane.PID: %s", err)
+	}
+
+	// index
+	pane.Index, err = strconv.Atoi(split[3])
 	if err != nil {
 		return Pane{}, fmt.Errorf("lib: parsePaneLine: strconv.Atoi: pane.Index: %s", err)
 	}
 
 	// width
-	pane.Width, err = strconv.Atoi(split[3])
+	pane.Width, err = strconv.Atoi(split[4])
 	if err != nil {
 		return Pane{}, fmt.Errorf("lib: parsePaneLine: strconv.Atoi: pane.Width: %s", err)
 	}
 
 	// height
-	pane.Height, err = strconv.Atoi(split[4])
+	pane.Height, err = strconv.Atoi(split[5])
 	if err != nil {
 		return Pane{}, fmt.Errorf("lib: parsePaneLine: strconv.Atoi: pane.Height: %s", err)
 	}
 
-	pane.Active = split[5] == "1"
+	pane.Active = split[6] == "1"
 
 	return pane, nil
 }
@@ -74,7 +86,7 @@ func GetPanes() ([]Pane, error) {
 	var ret []Pane
 
 	for _, l := range strings.Split(o, "\n") {
-		if l == "" || l == "\n" || l == ",,,," {
+		if l == "" || l == "\n" || l == paneEmtpyFmtLine {
 			continue
 		}
 		pane, err := parsePaneLine(l)
@@ -143,7 +155,7 @@ func GetPaneInDir(pane Pane, dir string) (Pane, bool, error) {
 		}
 	}
 
-	if o == ",,,," {
+	if o == paneEmtpyFmtLine {
 		return Pane{}, false, nil
 	}
 
@@ -301,4 +313,29 @@ func KillPane(pane Pane) error {
 	}
 
 	return nil
+}
+
+func FocusPane(pane Pane) error {
+	o, e, err := Tmux(GlobalArgs, "select-pane", map[string]string{
+		"-t": pane.ID,
+	}, "")
+	if err != nil {
+		return fmt.Errorf("lib: KillPane: Tmux: command failed: err=%s, stdout=%s, stderr=%s", err, o, e)
+	}
+
+	return nil
+}
+
+var vimRx = regexp.MustCompile(`.*vim$`)
+
+func IsVim(pane Pane) bool {
+	o, e, err := Tmux(GlobalArgs, "display-message", map[string]string{
+		"-p": "\"#{pane_current_command}\"",
+	}, "")
+	if err != nil {
+		log.Printf("err occurred: err=%s output=%s", err, e)
+		return false
+	}
+
+	return vimRx.MatchString(o)
 }

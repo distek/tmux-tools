@@ -2,8 +2,10 @@ package lib
 
 import (
 	"bytes"
+	"fmt"
 	"log"
 	"os/exec"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -120,4 +122,37 @@ func CloseOnLastDetatch(sock string, n int) {
 			return
 		}
 	}
+}
+
+// Get command line + args (hopefully (stares at darwin)) from pid
+func GetProcCmd(pid int) (string, error) {
+	var out []byte
+	var err error
+
+	switch runtime.GOOS {
+	case "linux":
+		out, err = exec.Command("ps", "--no-headers", "-o", "command", "--ppid", fmt.Sprint(pid)).CombinedOutput()
+		if err != nil {
+			return "", err
+		}
+	case "darwin":
+		// TODO: Darwin needs testing
+		// It wouldn't if they could just use modern tools
+		// Like, you'll innovate on silcon design, making the fastest consumer-avaialble ARM chip
+		// But the bash binary you ship is from 2007.
+		out, err = exec.Command("pgrep", "-P", fmt.Sprint(pid)).CombinedOutput()
+		if err != nil {
+			if err.Error() == "exit status 1" {
+				// try ps
+				out, err = exec.Command("ps", "-o", "command", "-p", fmt.Sprint(pid)).CombinedOutput()
+				if err != nil {
+					return "", err
+				}
+			} else {
+				return "", err
+			}
+		}
+	}
+
+	return strings.TrimSuffix(string(out), "\n"), nil
 }
