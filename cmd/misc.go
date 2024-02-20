@@ -99,5 +99,4 @@ var focusPaneCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(cleanCmd)
 	rootCmd.AddCommand(focusPaneCmd)
-
 }

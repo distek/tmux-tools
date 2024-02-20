@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -42,7 +43,10 @@ const (
 	sessionEmtpyPaneLineFmt = "%%%"
 )
 
-var sessionName string
+var (
+	flagSessionName string
+	flagSessionsDir string
+)
 
 var sessionCmd = &cobra.Command{
 	Use:   "sessions",
@@ -57,10 +61,12 @@ var sessionSaveCmd = &cobra.Command{
 	Short: "save a session",
 	Run: func(cmd *cobra.Command, args []string) {
 
-		fmt.Print("Session name: ")
-		fmt.Scanln(&sessionName)
+		if flagSessionName == "" {
+			fmt.Print("Session name: ")
+			fmt.Scanln(&flagSessionName)
+		}
 
-		if sessionName == "" {
+		if flagSessionName == "" {
 			// TODO: Be kinda cool to do a randomized name?
 			log.Fatal("Give it a name.")
 		}
@@ -73,6 +79,8 @@ var sessionSaveCmd = &cobra.Command{
 		}
 
 		var session Session
+
+		session.Name = flagSessionName
 
 		for _, w := range strings.Split(winLines, "\n") {
 			if w == "" || w == sessionEmtpyWinLineFmt {
@@ -157,29 +165,252 @@ var sessionSaveCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		err = os.WriteFile(xdg.ConfigHome+"/tmux/sessions/"+sessionName+".json", s, 0640)
+		err = os.WriteFile(xdg.ConfigHome+"/tmux/sessions/"+flagSessionName+".json", s, 0640)
 		if err != nil {
 			log.Fatal(err)
 		}
 	},
 }
 
+func getSessions(dir string) []Session {
+	var ret []Session
+
+	errExt := filepath.WalkDir(dir, func(path string, info os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		if !strings.HasSuffix(info.Name(), ".json") {
+			return nil
+		}
+
+		var thisSession Session
+
+		f, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		err = json.Unmarshal(f, &thisSession)
+		if err != nil {
+			return err
+		}
+
+		ret = append(ret, thisSession)
+
+		return nil
+	})
+
+	if errExt != nil {
+		log.Fatal(errExt)
+	}
+
+	return ret
+}
+
+func lsSessions(sessions []Session) []string {
+	var ret []string
+
+	for _, v := range sessions {
+		ret = append(ret, v.Name)
+	}
+
+	return ret
+}
+
+func sessionCreatePanes(sessNameWin string, window SessWin) error {
+	var err error
+
+	first := true
+	focus := 0
+
+	for _, p := range window.Panes {
+		if !first {
+			// start pane with -c for the remainder
+			o, e, err := lib.Tmux(lib.GlobalArgs, "split-window", map[string]string{
+				"-t": sessNameWin,
+				"-c": p.Path,
+			}, "")
+			if err != nil {
+				log.Println(o)
+				log.Println(e)
+				log.Println(err)
+				return err
+			}
+		} else {
+			first = false
+			// cd in first pane
+			_, _, err = lib.Tmux(lib.GlobalArgs, "send-keys", map[string]string{
+				"-t": fmt.Sprintf("%s.%d", sessNameWin, p.Index),
+			}, fmt.Sprintf("\"cd %s\" Enter", p.Path))
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+
+			_, _, err = lib.Tmux(lib.GlobalArgs, "send-keys", map[string]string{
+				"-t": fmt.Sprintf("%s.%d", sessNameWin, p.Index),
+			}, "C-l")
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+		}
+
+		if p.Command != "" {
+			_, _, err := lib.Tmux(lib.GlobalArgs, "send-keys", map[string]string{
+				"-t": fmt.Sprintf("%s.%d", sessNameWin, p.Index),
+			}, fmt.Sprintf("\"cd %s\" Enter", p.Path))
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+		}
+
+		if p.Current {
+			focus = p.Index
+		}
+	}
+
+	_, _, err = lib.Tmux(lib.GlobalArgs, "select-pane", map[string]string{
+		"-t": fmt.Sprintf("%s.%d", sessNameWin, focus),
+	}, "")
+
+	log.Println(err)
+	return err
+}
+
+func sessionCreateWindows(sessName string, windows []SessWin) error {
+	first := true
+	focus := 0
+
+	for _, w := range windows {
+		target := fmt.Sprintf("%s:%d", sessName, w.Index)
+
+		if !first {
+			_, _, err := lib.Tmux(lib.GlobalArgs, "new-window", map[string]string{
+				"-t": target,
+				"-n": w.Name,
+			}, "")
+			if err != nil {
+				log.Println(err)
+				return err
+			}
+		} else {
+			first = false
+
+			o, e, err := lib.Tmux(lib.GlobalArgs, "rename-window", map[string]string{
+				"-t":   target,
+				w.Name: "",
+			}, "")
+			if err != nil {
+				log.Println(o)
+				log.Println(e)
+				log.Println(err)
+				return err
+			}
+		}
+
+		if w.Current {
+			focus = w.Index
+		}
+
+		err := sessionCreatePanes(target, w)
+		if err != nil {
+			log.Println(err)
+			return err
+		}
+
+		o, e, err := lib.Tmux(lib.GlobalArgs, "select-layout", map[string]string{
+			"-t": target,
+		}, fmt.Sprintf("\"%s\"", w.Layout))
+
+		if err != nil {
+			log.Println(o)
+			log.Println(e)
+			log.Println(err)
+			return err
+		}
+	}
+
+	_, _, err := lib.Tmux(lib.GlobalArgs, "select-window", map[string]string{
+		"-t": fmt.Sprintf("%s:%d", sessName, focus),
+	}, "")
+
+	log.Println(err)
+	return err
+}
+
 var sessionLoadCmd = &cobra.Command{
 	Use:   "load",
 	Short: "load a session",
 	Run: func(cmd *cobra.Command, args []string) {
-		// if no user provided file or name, load all and start fzf
+		var err error
 
-		// createWindows
-		// inside createWindows, createPanes
-		// finally, attach to session
+		var session Session
+
+		sessions := getSessions(flagSessionsDir)
+
+		// if no user provided file or name, load all and start fzf
+		if flagSessionName == "" {
+			flagSessionName, err = lib.Fzf(lsSessions(sessions))
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if flagSessionName == "" {
+				return
+			}
+		}
+
+		for _, v := range sessions {
+			if v.Name == flagSessionName {
+				session = v
+			}
+		}
+
+		o, e, err := lib.Tmux(lib.GlobalArgs, "new-session", map[string]string{
+			"-d": "",
+			"-s": session.Name,
+		}, "")
+		if err != nil {
+			log.Println(o)
+			log.Println(e)
+			log.Fatal(err)
+		}
+
+		err = sessionCreateWindows(session.Name, session.Windows)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if os.Getenv("TMUX") != "" {
+			_, _, err = lib.Tmux(lib.GlobalArgs, "switch-client", map[string]string{
+				"-t": session.Name,
+			}, "")
+			if err != nil {
+				log.Fatal(err)
+			}
+		} else {
+			_, _, err = lib.Tmux(lib.GlobalArgs, "attach", map[string]string{
+				"-t": session.Name,
+			}, "")
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(sessionCmd)
 
-	sessionCmd.Flags().StringVarP(&sessionName, "name", "n", "", "name of session to save/load")
+	sessionCmd.PersistentFlags().StringVarP(&flagSessionName, "name", "n", "", "name of session to save/load")
+	sessionCmd.PersistentFlags().StringVarP(&flagSessionsDir, "dir", "d", xdg.ConfigHome+"/tmux/sessions", "directory to save/load sessions from")
 
 	sessionCmd.AddCommand(sessionSaveCmd)
 

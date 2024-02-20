@@ -3,7 +3,9 @@ package lib
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -155,4 +157,40 @@ func GetProcCmd(pid int) (string, error) {
 	}
 
 	return strings.TrimSuffix(string(out), "\n"), nil
+}
+
+func Fzf(list []string) (string, error) {
+	data := bytes.NewBuffer([]byte(strings.Join(list, "\n")))
+
+	var result strings.Builder
+	cmd := exec.Command("fzf")
+	cmd.Stdout = &result
+	cmd.Stderr = os.Stderr
+	stdin, err := cmd.StdinPipe()
+	if err != nil {
+		return "", err
+	}
+	_, err = io.Copy(stdin, data)
+	if err != nil {
+		return "", err
+	}
+	err = stdin.Close()
+	if err != nil {
+		return "", err
+	}
+
+	err = cmd.Start()
+	if err != nil {
+		return "", err
+	}
+
+	err = cmd.Wait()
+	if err != nil {
+		// No selection made - don't error
+		if cmd.ProcessState.ExitCode() == 130 {
+			return "", nil
+		}
+		return "", err
+	}
+	return strings.TrimSpace(result.String()), nil
 }
