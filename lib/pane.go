@@ -30,7 +30,7 @@ func parsePaneLine(line string) (Pane, error) {
 	split := strings.Split(line, ",")
 
 	if len(split) != 7 {
-		return Pane{}, fmt.Errorf("lib: parsePaneLine: strings.Split: split: split length != 5: line=%s", line)
+		return Pane{}, fmt.Errorf("lib: parsePaneLine: strings.Split: split: split length != 7: line=%s", line)
 	}
 
 	// ID
@@ -91,7 +91,7 @@ func GetPanes() ([]Pane, error) {
 		}
 		pane, err := parsePaneLine(l)
 		if err != nil {
-			return nil, fmt.Errorf("lib: GetPanes: parsePaneLin: pane: err=%s, line=%s", err.Error(), l)
+			return nil, fmt.Errorf("lib: GetPanes: parsePaneLin: pane: err=%s, line=%s", err, l)
 		}
 
 		ret = append(ret, pane)
@@ -143,7 +143,8 @@ func GetPaneInDir(pane Pane, dir string) (Pane, bool, error) {
 		"-F": paneFmtLine,
 	}, "")
 	if err != nil {
-		return Pane{}, false, fmt.Errorf("lib: GetPaneInDir: Tmux: command failed: err=%s, stdout=%s, stderr=%s", err, o, e)
+		log.Println(e)
+		return Pane{}, false, fmt.Errorf("lib: GetPaneInDir: Tmux: command failed: %s", err)
 	}
 
 	o = strings.Split(o, "\n")[0]
@@ -191,12 +192,13 @@ func SelectPane(pane Pane) error {
 }
 
 func SwapPanes(src, dest Pane) error {
-	o, e, err := Tmux(GlobalArgs, "swap-pane", map[string]string{
+	_, e, err := Tmux(GlobalArgs, "swap-pane", map[string]string{
 		"-s": src.ID,
 		"-t": dest.ID,
 	}, "")
 	if err != nil {
-		return fmt.Errorf("lib: swapPanes: Tmux: command failed: err=%s, stdout=%s, stderr=%s", err, o, e)
+		log.Println(e)
+		return fmt.Errorf("lib: swapPanes: Tmux: command failed: %s", err)
 	}
 
 	return nil
