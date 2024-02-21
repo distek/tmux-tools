@@ -171,18 +171,20 @@ func GetCurrentPane() (Pane, error) {
 	}, "")
 
 	if err != nil {
-		return Pane{}, fmt.Errorf("lib: getPaneInDir: Tmux: command failed: err=%s, stdout=%s, stderr=%s", err, o, e)
+		log.Println(e)
+		return Pane{}, err
 	}
 
 	return parsePaneLine(strings.Split(o, "\n")[0])
 }
 
 func SelectPane(pane Pane) error {
-	o, e, err := Tmux(GlobalArgs, "select-pane", map[string]string{
+	_, e, err := Tmux(GlobalArgs, "select-pane", map[string]string{
 		"-t": pane.ID,
 	}, "")
 	if err != nil {
-		return fmt.Errorf("lib: selectPane: Tmux: command failed: err=%s, stdout=%s, stderr=%s", err, o, e)
+		log.Println(e)
+		return err
 	}
 
 	return nil
@@ -213,14 +215,14 @@ var dirArgs = map[string][]string{
 }
 
 // GetFurthestPaneInDir - valid args are:
-// top-left
-// top-right
-// bottom-left
-// bottom-right
-// left
-// right
-// up
-// down
+// top-left,
+// top-right,
+// bottom-left,
+// bottom-right,
+// left,
+// right,
+// up,
+// and down
 func GetFurthestPaneInDir(dir string) (Pane, error) {
 	panes, err := GetPanes()
 	if err != nil {
@@ -238,7 +240,8 @@ func GetFurthestPaneInDir(dir string) (Pane, error) {
 			"-F": dirArgs[dir][0],
 		}, "")
 		if err != nil {
-			return Pane{}, fmt.Errorf("lib: GetFurthestPaneInDir: Tmux: command failed: err=%s, stdout=%s, stderr=%s", err, o, e)
+			log.Println(e)
+			return Pane{}, err
 		}
 
 		o = strings.Split(o, "\n")[0]
@@ -248,7 +251,7 @@ func GetFurthestPaneInDir(dir string) (Pane, error) {
 		}
 	}
 
-	return Pane{}, fmt.Errorf("lib: GetFurthestPaneInDir: could not find furthest %s pane?", dir)
+	return Pane{}, fmt.Errorf("could not find furthest %s pane?", dir)
 }
 
 type Neighbor struct {
@@ -281,7 +284,7 @@ func GetNeighbors(pane Pane) (Neighbors, error) {
 
 		p, ok, err := GetPaneInDir(pane, k)
 		if err != nil {
-			return Neighbors{}, fmt.Errorf("lib: GetNeighbors: GetPaneInDir: %s : %s", k, err)
+			return Neighbors{}, fmt.Errorf("%s : %s", k, err)
 		}
 
 		ret.Panes[k] = Neighbor{
@@ -305,22 +308,24 @@ func GetPanesLen() int {
 }
 
 func KillPane(pane Pane) error {
-	o, e, err := Tmux(GlobalArgs, "kill-pane", map[string]string{
+	_, e, err := Tmux(GlobalArgs, "kill-pane", map[string]string{
 		"-t": pane.ID,
 	}, "")
 	if err != nil {
-		return fmt.Errorf("lib: KillPane: Tmux: command failed: err=%s, stdout=%s, stderr=%s", err, o, e)
+		log.Println(e)
+		return err
 	}
 
 	return nil
 }
 
 func FocusPane(pane Pane) error {
-	o, e, err := Tmux(GlobalArgs, "select-pane", map[string]string{
+	_, e, err := Tmux(GlobalArgs, "select-pane", map[string]string{
 		"-t": pane.ID,
 	}, "")
 	if err != nil {
-		return fmt.Errorf("lib: KillPane: Tmux: command failed: err=%s, stdout=%s, stderr=%s", err, o, e)
+		log.Println(e)
+		return err
 	}
 
 	return nil
@@ -333,7 +338,8 @@ func IsVim(pane Pane) bool {
 		"-p": "\"#{pane_current_command}\"",
 	}, "")
 	if err != nil {
-		log.Printf("err occurred: err=%s output=%s", err, e)
+		log.Println(e)
+		log.Println(err)
 		return false
 	}
 

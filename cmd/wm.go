@@ -73,9 +73,10 @@ func splitFull(pane lib.Pane, dir string) {
 
 	merged := mergeMaps(defaultArgs, extraArgs)
 
-	o, e, err := lib.Tmux(lib.GlobalArgs, "split-window", merged, "cat")
+	_, e, err := lib.Tmux(lib.GlobalArgs, "split-window", merged, "cat")
 	if err != nil {
-		log.Fatal(fmt.Errorf("cmd: moveWindowInDir: lib.Tmux: up: command failed: err=%s, stdout=%s, err=%s", err, o, e))
+		log.Println(e)
+		log.Fatal(err)
 	}
 
 	newPane, err := lib.GetCurrentPane()

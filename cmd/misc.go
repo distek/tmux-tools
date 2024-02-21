@@ -18,8 +18,8 @@ var cleanCmd = &cobra.Command{
 
 		o, e, err := lib.Tmux(lib.GlobalArgs, "ls", nil, "")
 		if err != nil {
-			log.Printf("Got err: %s: %s", err, e)
-			os.Exit(1)
+			log.Println(e)
+			log.Fatal(err)
 		}
 
 		for _, v := range strings.Split(o, "\n") {
@@ -32,7 +32,8 @@ var cleanCmd = &cobra.Command{
 
 				_, e, err := lib.Tmux(lib.GlobalArgs, "kill-window", map[string]string{"-t": id}, "")
 				if err != nil {
-					log.Printf("Got err: %s: %s", err, e)
+					log.Println(e)
+					log.Fatal(err)
 					return
 				}
 			}

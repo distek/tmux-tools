@@ -75,7 +75,8 @@ var sessionSaveCmd = &cobra.Command{
 			"-F": sessionWinLinesFmt,
 		}, "")
 		if err != nil {
-			log.Fatalf("got err: err=%s, out=%s", err, e)
+			log.Println(e)
+			log.Fatal(err)
 		}
 
 		var session Session
@@ -106,7 +107,8 @@ var sessionSaveCmd = &cobra.Command{
 				"-F": sessionPaneLinesFmt,
 			}, "")
 			if err != nil {
-				log.Fatalf("got err: err=%s, out=%s", err, e)
+				log.Println(e)
+				log.Fatal(err)
 			}
 
 			for _, p := range strings.Split(paneLines, "\n") {
@@ -165,7 +167,10 @@ var sessionSaveCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		err = os.WriteFile(xdg.ConfigHome+"/tmux/sessions/"+flagSessionName+".json", s, 0640)
+		err = os.WriteFile(
+			xdg.ConfigHome+"/tmux/sessions/"+flagSessionName+".json",
+			s,
+			0640)
 		if err != nil {
 			log.Fatal(err)
 		}
