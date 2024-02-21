@@ -231,42 +231,40 @@ func sessionCreatePanes(sessNameWin string, window SessWin) error {
 	for _, p := range window.Panes {
 		if !first {
 			// start pane with -c for the remainder
-			o, e, err := lib.Tmux(lib.GlobalArgs, "split-window", map[string]string{
+			_, e, err := lib.Tmux(lib.GlobalArgs, "split-window", map[string]string{
 				"-t": sessNameWin,
 				"-c": p.Path,
 			}, "")
 			if err != nil {
-				log.Println(o)
 				log.Println(e)
-				log.Println(err)
 				return err
 			}
 		} else {
 			first = false
 			// cd in first pane
-			_, _, err = lib.Tmux(lib.GlobalArgs, "send-keys", map[string]string{
+			_, e, err := lib.Tmux(lib.GlobalArgs, "send-keys", map[string]string{
 				"-t": fmt.Sprintf("%s.%d", sessNameWin, p.Index),
 			}, fmt.Sprintf("\"cd %s\" Enter", p.Path))
 			if err != nil {
-				log.Println(err)
+				log.Println(e)
 				return err
 			}
 
-			_, _, err = lib.Tmux(lib.GlobalArgs, "send-keys", map[string]string{
+			_, e, err = lib.Tmux(lib.GlobalArgs, "send-keys", map[string]string{
 				"-t": fmt.Sprintf("%s.%d", sessNameWin, p.Index),
 			}, "C-l")
 			if err != nil {
-				log.Println(err)
+				log.Println(e)
 				return err
 			}
 		}
 
 		if p.Command != "" {
-			_, _, err := lib.Tmux(lib.GlobalArgs, "send-keys", map[string]string{
+			_, e, err := lib.Tmux(lib.GlobalArgs, "send-keys", map[string]string{
 				"-t": fmt.Sprintf("%s.%d", sessNameWin, p.Index),
-			}, fmt.Sprintf("\"cd %s\" Enter", p.Path))
+			}, fmt.Sprintf("\"%s\" Enter", p.Command))
 			if err != nil {
-				log.Println(err)
+				log.Println(e)
 				return err
 			}
 		}
@@ -276,12 +274,16 @@ func sessionCreatePanes(sessNameWin string, window SessWin) error {
 		}
 	}
 
-	_, _, err = lib.Tmux(lib.GlobalArgs, "select-pane", map[string]string{
+	_, e, err := lib.Tmux(lib.GlobalArgs, "select-pane", map[string]string{
 		"-t": fmt.Sprintf("%s.%d", sessNameWin, focus),
 	}, "")
 
-	log.Println(err)
-	return err
+	if err != nil {
+		log.Println(e)
+		return err
+	}
+
+	return nil
 }
 
 func sessionCreateWindows(sessName string, windows []SessWin) error {
@@ -292,25 +294,22 @@ func sessionCreateWindows(sessName string, windows []SessWin) error {
 		target := fmt.Sprintf("%s:%d", sessName, w.Index)
 
 		if !first {
-			_, _, err := lib.Tmux(lib.GlobalArgs, "new-window", map[string]string{
+			_, e, err := lib.Tmux(lib.GlobalArgs, "new-window", map[string]string{
 				"-t": target,
 				"-n": w.Name,
 			}, "")
 			if err != nil {
-				log.Println(err)
+				log.Println(e)
 				return err
 			}
 		} else {
 			first = false
 
-			o, e, err := lib.Tmux(lib.GlobalArgs, "rename-window", map[string]string{
-				"-t":   target,
-				w.Name: "",
-			}, "")
+			_, e, err := lib.Tmux(lib.GlobalArgs, "rename-window", map[string]string{
+				"-t": target,
+			}, w.Name)
 			if err != nil {
-				log.Println(o)
 				log.Println(e)
-				log.Println(err)
 				return err
 			}
 		}
@@ -321,18 +320,15 @@ func sessionCreateWindows(sessName string, windows []SessWin) error {
 
 		err := sessionCreatePanes(target, w)
 		if err != nil {
-			log.Println(err)
 			return err
 		}
 
-		o, e, err := lib.Tmux(lib.GlobalArgs, "select-layout", map[string]string{
+		_, e, err := lib.Tmux(lib.GlobalArgs, "select-layout", map[string]string{
 			"-t": target,
 		}, fmt.Sprintf("\"%s\"", w.Layout))
 
 		if err != nil {
-			log.Println(o)
 			log.Println(e)
-			log.Println(err)
 			return err
 		}
 	}
@@ -373,12 +369,11 @@ var sessionLoadCmd = &cobra.Command{
 			}
 		}
 
-		o, e, err := lib.Tmux(lib.GlobalArgs, "new-session", map[string]string{
+		_, e, err := lib.Tmux(lib.GlobalArgs, "new-session", map[string]string{
 			"-d": "",
 			"-s": session.Name,
 		}, "")
 		if err != nil {
-			log.Println(o)
 			log.Println(e)
 			log.Fatal(err)
 		}
@@ -389,17 +384,19 @@ var sessionLoadCmd = &cobra.Command{
 		}
 
 		if os.Getenv("TMUX") != "" {
-			_, _, err = lib.Tmux(lib.GlobalArgs, "switch-client", map[string]string{
+			_, e, err = lib.Tmux(lib.GlobalArgs, "switch-client", map[string]string{
 				"-t": session.Name,
 			}, "")
 			if err != nil {
+				log.Println(e)
 				log.Fatal(err)
 			}
 		} else {
-			_, _, err = lib.Tmux(lib.GlobalArgs, "attach", map[string]string{
+			_, e, err = lib.Tmux(lib.GlobalArgs, "attach", map[string]string{
 				"-t": session.Name,
 			}, "")
 			if err != nil {
+				log.Println(e)
 				log.Fatal(err)
 			}
 		}
