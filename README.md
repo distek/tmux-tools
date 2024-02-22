@@ -10,9 +10,11 @@ Pane movement. Not perfect but does it well enough for my use. Will probably imp
 
 `tmux-tools wm [up|down|left|right]`
 
-#### TODO
+TODO:
 
 - [ ] It would be nice if neighbors swapped instead of moved I think? Or an option to swap? idk
+
+---
 
 ### `nest`
 
@@ -20,7 +22,27 @@ Nested tmux session with auto-close. I use this in neovim config for my toggle t
 
 `tmux-tools nest --tmux-config <path to nested.conf>`
 
-In my nested config, I have special remaps setup so it doesn't interfere with the parent tmux mappings
+In my nested config, I have special remaps setup so it doesn't interfere with the parent tmux mappings:
+
+- Normal config:
+
+```
+source-file ~/.config/tmux/common.conf
+
+unbind C-b
+set -g prefix M-Space;
+```
+
+- Nested config:
+
+```
+source-file ~/.config/tmux/common.conf
+
+unbind C-b
+set -g prefix M-a;
+```
+
+---
 
 ### `sessions`
 
@@ -41,21 +63,39 @@ sessions:
     - "man"
 ```
 
-- asks for name of session
-  `tmux-tools sessions save`
+Asks for name of session:
 
-- save session as provided name
-  `tmux-tools sessions save --name <name>`
+`tmux-tools sessions save`
 
-- load session by provided name
-  `tmux-tools sessions load --name <name>`
+Save session as provided name:
 
-- load session by `fzf` (requires `fzf` binary be in PATH)
-  `tmux-tools sessions load`
+`tmux-tools sessions save --name <name>`
 
-#### TODO
+Load session by provided name:
+
+`tmux-tools sessions load --name <name>`
+
+Load session by `fzf` (requires `fzf` binary be in PATH):
+
+`tmux-tools sessions load`
+
+TODO:
 
 - [ ] Should kill new session if restoring fails
+
+---
+
+### `clean`
+
+Kills all non-`(attached)` sessions on `-S` socket
+
+---
+
+### `focus-pane`
+
+Focus pane in a given direction:
+
+`tmux-tools focus-pane {left | down | up | right}`
 
 ## TODO
 

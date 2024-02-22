@@ -10,9 +10,10 @@ import (
 )
 
 var wmCmd = &cobra.Command{
-	Use:       "wm",
+	Use:       "wm {left | down | up | right}",
 	Short:     "Window manager",
 	ValidArgs: []string{"left", "down", "up", "right"},
+	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
 			log.Printf("Provide only one of %v", cmd.ValidArgs)
@@ -21,14 +22,6 @@ var wmCmd = &cobra.Command{
 		}
 
 		dir := args[0]
-
-		switch dir {
-		case "left", "down", "up", "right":
-		default:
-			log.Printf("Provide only one of %v", cmd.ValidArgs)
-			_ = cmd.Usage()
-			os.Exit(1)
-		}
 
 		moveWindowInDir(dir)
 	},

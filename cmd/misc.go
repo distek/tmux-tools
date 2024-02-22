@@ -43,9 +43,10 @@ var cleanCmd = &cobra.Command{
 }
 
 var focusPaneCmd = &cobra.Command{
-	Use:       "focus-pane",
-	Short:     "",
+	Use:       "focus-pane {left | down | up | right}",
+	Short:     "Focus pane in a given direction (left, down, up, right)",
 	ValidArgs: []string{"left", "down", "up", "right"},
+	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
 		dir := args[0]
 
