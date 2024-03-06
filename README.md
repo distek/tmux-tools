@@ -8,7 +8,7 @@ Some tools/wrappers around tmux to make my life easier
 
 Pane movement. Not perfect but does it well enough for my use. Will probably improve upon it at some point.
 
-`tmux-tools wm [up|down|left|right]`
+`tmux-tools wm [top|bottom|left|right]`
 
 TODO:
 
@@ -95,7 +95,7 @@ Kills all non-`(attached)` sessions on `-S` socket
 
 Focus pane in a given direction:
 
-`tmux-tools focus-pane {left | down | up | right}`
+`tmux-tools focus-pane {left | bottom | top | right}`
 
 ## TODO
 

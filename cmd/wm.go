@@ -10,9 +10,9 @@ import (
 )
 
 var wmCmd = &cobra.Command{
-	Use:       "wm {left | down | up | right}",
+	Use:       "wm {left | bottom | top | right}",
 	Short:     "Window manager",
-	ValidArgs: []string{"left", "down", "up", "right"},
+	ValidArgs: []string{"left", "bottom", "top", "right"},
 	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
 		if len(args) != 1 {
@@ -52,10 +52,10 @@ func splitFull(pane lib.Pane, dir string) {
 	extraArgs := make(map[string]string, 2)
 
 	switch dir {
-	case "up":
+	case "top":
 		extraArgs["-b"] = ""
 		extraArgs["-v"] = ""
-	case "down":
+	case "bottom":
 		extraArgs["-v"] = ""
 	case "left":
 		extraArgs["-b"] = ""
@@ -100,10 +100,10 @@ func splitHalf(dst, src lib.Pane, dir string) {
 
 	extraArgs := make(map[string]string, 2)
 	switch dir {
-	case "up":
+	case "top":
 		extraArgs["-b"] = ""
 		extraArgs["-v"] = ""
-	case "down":
+	case "bottom":
 		extraArgs["-v"] = ""
 	case "left":
 		extraArgs["-b"] = ""
@@ -140,35 +140,35 @@ func moveWindowInDir(dir string) {
 
 	// favor splitting to the right or bottom when merging panes
 	switch dir {
-	case "up":
-		if neighbors.Panes["up"].Exists {
-			splitHalf(neighbors.Panes["up"].Pane, currPane, "right")
+	case "top":
+		if neighbors.Panes["top"].Exists {
+			splitHalf(neighbors.Panes["top"].Pane, currPane, "right")
 		} else {
 			if panesLen == 2 || neighbors.Panes["left"].Exists || neighbors.Panes["right"].Exists {
-				splitFull(currPane, "up")
+				splitFull(currPane, "top")
 			}
 		}
-	case "down":
-		if neighbors.Panes["down"].Exists {
-			splitHalf(neighbors.Panes["down"].Pane, currPane, "right")
+	case "bottom":
+		if neighbors.Panes["bottom"].Exists {
+			splitHalf(neighbors.Panes["bottom"].Pane, currPane, "right")
 		} else {
 			if panesLen == 2 || neighbors.Panes["left"].Exists || neighbors.Panes["right"].Exists {
-				splitFull(currPane, "down")
+				splitFull(currPane, "bottom")
 			}
 		}
 	case "left":
 		if neighbors.Panes["left"].Exists {
-			splitHalf(neighbors.Panes["left"].Pane, currPane, "down")
+			splitHalf(neighbors.Panes["left"].Pane, currPane, "bottom")
 		} else {
-			if panesLen == 2 || neighbors.Panes["up"].Exists || neighbors.Panes["down"].Exists {
+			if panesLen == 2 || neighbors.Panes["top"].Exists || neighbors.Panes["bottom"].Exists {
 				splitFull(currPane, "left")
 			}
 		}
 	case "right":
 		if neighbors.Panes["right"].Exists {
-			splitHalf(neighbors.Panes["right"].Pane, currPane, "down")
+			splitHalf(neighbors.Panes["right"].Pane, currPane, "bottom")
 		} else {
-			if panesLen == 2 || neighbors.Panes["up"].Exists || neighbors.Panes["down"].Exists {
+			if panesLen == 2 || neighbors.Panes["top"].Exists || neighbors.Panes["bottom"].Exists {
 				splitFull(currPane, "right")
 			}
 		}

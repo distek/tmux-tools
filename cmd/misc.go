@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"strings"
@@ -43,15 +42,15 @@ var cleanCmd = &cobra.Command{
 }
 
 var focusPaneCmd = &cobra.Command{
-	Use:       "focus-pane {left | down | up | right}",
-	Short:     "Focus pane in a given direction (left, down, up, right)",
-	ValidArgs: []string{"left", "down", "up", "right"},
+	Use:       "focus-pane {left | bottom | top | bottom}",
+	Short:     "Focus pane in a given direction (left, bottom, top, right) (doesn't wrap)",
+	ValidArgs: []string{"left", "bottom", "top", "right"},
 	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
 		dir := args[0]
 
 		switch dir {
-		case "left", "down", "up", "right":
+		case "left", "right", "top", "bottom":
 		default:
 			log.Printf("Provide only one of %v", cmd.ValidArgs)
 			_ = cmd.Usage()
@@ -63,35 +62,16 @@ var focusPaneCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		dstP, exists, err := lib.GetPaneInDir(p, dir)
+		neighbors, err := lib.GetNeighbors(p)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		if !exists {
-			var vimDir string
-			switch dir {
-			case "left":
-				vimDir = "h"
-			case "down":
-				vimDir = "j"
-			case "up":
-				vimDir = "k"
-			case "right":
-				vimDir = "l"
-			}
-
-			_, _, err := lib.Tmux(lib.GlobalArgs, "send-keys", map[string]string{
-				fmt.Sprintf("M-%s", vimDir): "",
-			}, "")
-			if err != nil {
-				log.Fatal(err)
-			}
-
-			return
+		if !neighbors.Panes[dir].Exists {
+			log.Fatalf("no pane in dir %s", dir)
 		}
 
-		err = lib.FocusPane(dstP)
+		err = lib.FocusPane(neighbors.Panes[dir].Pane)
 		if err != nil {
 			log.Fatal(err)
 		}

@@ -118,8 +118,8 @@ func getNeighborDirs(pane Pane) map[string]bool {
 
 	ret["left"] = split[0] == "0"
 	ret["right"] = split[1] == "0"
-	ret["up"] = split[2] == "0"
-	ret["down"] = split[3] == "0"
+	ret["top"] = split[2] == "0"
+	ret["bottom"] = split[3] == "0"
 
 	return ret
 }
@@ -138,8 +138,31 @@ func GetPaneInDir(pane Pane, dir string) (Pane, bool, error) {
 	}
 
 	o, e, err := Tmux(GlobalArgs, "display-message", map[string]string{
+		"-p": fmt.Sprintf("\"#{pane_at_%s}\"", dir),
+	}, "")
+	if err != nil {
+		log.Println(e)
+		return Pane{}, false, fmt.Errorf("lib: GetPaneInDir: Tmux: command failed: %s", err)
+	}
+
+	if o == "1" {
+		return Pane{}, false, nil
+	}
+
+	var ofDir string
+
+	switch dir {
+	case "left", "right":
+		ofDir = dir
+	case "bottom":
+		ofDir = "down"
+	case "top":
+		ofDir = "up"
+	}
+
+	o, e, err = Tmux(GlobalArgs, "display-message", map[string]string{
 		"-p": "",
-		"-t": fmt.Sprintf("{%s-of}", dir),
+		"-t": fmt.Sprintf("{%s-of}", ofDir),
 		"-F": paneFmtLine,
 	}, "")
 	if err != nil {
@@ -212,8 +235,8 @@ var dirArgs = map[string][]string{
 	"bottom-right": {"\"#{pane_at_bottom},#{pane_at_right}\"", "11"},
 	"left":         {"\"#{pane_at_left}\"", "1"},
 	"right":        {"\"#{pane_at_right}\"", "1"},
-	"up":           {"\"#{pane_at_top}\"", "1"},
-	"down":         {"\"#{pane_at_bottom}\"", "1"},
+	"top":          {"\"#{pane_at_top}\"", "1"},
+	"bottom":       {"\"#{pane_at_bottom}\"", "1"},
 }
 
 // GetFurthestPaneInDir - valid args are:
@@ -223,8 +246,8 @@ var dirArgs = map[string][]string{
 // bottom-right,
 // left,
 // right,
-// up,
-// and down
+// top,
+// and bottom
 func GetFurthestPaneInDir(dir string) (Pane, error) {
 	panes, err := GetPanes()
 	if err != nil {
@@ -265,7 +288,7 @@ type Neighbors struct {
 	Panes map[string]Neighbor
 }
 
-// Get neighboring panes ("left", "down", "up", "right")
+// Get neighboring panes ("left", "bottom", "top", "right")
 func GetNeighbors(pane Pane) (Neighbors, error) {
 	ret := Neighbors{}
 
