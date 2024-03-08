@@ -98,6 +98,11 @@ func SockHasAttached(sock string) bool {
 	return false
 }
 
+func SockActive(sock string) bool {
+	_, e, _ := Tmux(GlobalArgs, "ls", nil, "")
+	return !strings.HasPrefix(e, "no server running on")
+}
+
 // CloseOnLastDetatch checks the socket `sock` every `n` milliseconds and kills
 // the server if there are no more attached clients.
 //
