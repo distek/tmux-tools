@@ -5,7 +5,10 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/distek/tmux-tools/lib"
 	"github.com/spf13/cobra"
@@ -13,6 +16,8 @@ import (
 
 var (
 	flagNestConfig string
+	flagNestPID    int
+	flagNestWatch  bool = false
 )
 
 func nestGetDefault() string {
@@ -56,8 +61,45 @@ func dirPath(sock string) string {
 	return bld.String()
 }
 
-func remapPrefix(pfx string) {
+func spawnWatcher(pid int) {
+	c := exec.Command(os.Args[0], "nest", "-S", flagTmuxSockPath, "--watch", "--pid", strconv.Itoa(pid))
 
+	err := c.Start()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// err = c.Process.Release()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	p, err := os.FindProcess(c.Process.Pid)
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+
+	err = p.Release()
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func watcher(pid int) {
+	// Give time for the nested socket to start
+	time.Sleep(time.Second * 1)
+
+	for {
+		_, err := os.FindProcess(pid)
+		if err != nil || !lib.SockHasAttached(flagTmuxSockPath) {
+			lib.KillServer(flagTmuxSockPath)
+			time.Sleep(time.Second * 5)
+			lib.KillServer(flagTmuxSockPath)
+			return
+		}
+
+		time.Sleep(time.Second * 5)
+	}
 }
 
 var nestCmd = &cobra.Command{
@@ -69,6 +111,16 @@ var nestCmd = &cobra.Command{
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		initGlobalArgs()
+
+		if flagNestWatch {
+			if flagNestPID == 0 {
+				log.Fatal("PID is not set")
+			}
+
+			watcher(flagNestPID)
+
+			return
+		}
 
 		// If user did not provide a socket address, make one
 		if flagTmuxSockPath == "" {
@@ -83,6 +135,20 @@ var nestCmd = &cobra.Command{
 
 		log.SetOutput(f)
 
+		if lib.SockActive(flagTmuxSockPath) {
+			c := exec.Command("tmux", "-S", flagTmuxSockPath, "new-session")
+			c.Stdin = os.Stdin
+			c.Stdout = os.Stdout
+			c.Stderr = os.Stderr
+
+			err := c.Run()
+			if err != nil {
+				log.Println(err)
+			}
+
+			return
+		}
+
 		c := exec.Command("tmux", "-S", flagTmuxSockPath, "-f", flagNestConfig)
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
@@ -90,18 +156,36 @@ var nestCmd = &cobra.Command{
 
 		os.Setenv("NEST_TMUX", "1")
 
-		err = c.Start()
-		if err != nil {
-			log.Fatal(err)
-		}
+		var wg1 sync.WaitGroup
+		var wg2 sync.WaitGroup
+		wg1.Add(1)
+		go func() {
+			err = c.Start()
+			if err != nil {
+				log.Println(err)
+				wg1.Done()
+				return
+			}
 
-		remapPrefix(flagNestConfig)
+			wg1.Done()
 
-		err = c.Wait()
-		if err != nil {
-			log.Println(err)
-		}
+			wg2.Add(1)
 
+			err = c.Wait()
+			if err != nil {
+				log.Println(err)
+				wg2.Done()
+				return
+			}
+
+			wg2.Done()
+		}()
+
+		wg1.Wait()
+
+		go spawnWatcher(c.Process.Pid)
+
+		wg2.Wait()
 		if !lib.SockHasAttached(flagTmuxSockPath) {
 			lib.KillServer(flagTmuxSockPath)
 		}
@@ -112,4 +196,10 @@ func init() {
 	rootCmd.AddCommand(nestCmd)
 
 	nestCmd.Flags().StringVarP(&flagNestConfig, "tmux-config", "t", "", "Use this config file for tmux")
+
+	nestCmd.Flags().IntVarP(&flagNestPID, "pid", "[", -1, "PID to watch")
+	nestCmd.Flags().BoolVarP(&flagNestWatch, "watch", "w", false, "enable watch")
+
+	_ = nestCmd.Flags().MarkHidden("pid")
+	_ = nestCmd.Flags().MarkHidden("watch")
 }
