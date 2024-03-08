@@ -47,6 +47,8 @@ var focusPaneCmd = &cobra.Command{
 	ValidArgs: []string{"left", "bottom", "top", "right"},
 	Args:      cobra.MatchAll(cobra.ExactArgs(1), cobra.OnlyValidArgs),
 	Run: func(cmd *cobra.Command, args []string) {
+		initGlobalArgs()
+
 		dir := args[0]
 
 		switch dir {
