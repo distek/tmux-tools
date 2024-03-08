@@ -61,21 +61,10 @@ func Tmux(args map[string]string, cmd string, cmdArgs map[string]string, trailin
 // KillServer kills the server at sock or the current server if sock is
 // an empty string
 func KillServer(sock string) {
-	tempSock, ok := GlobalArgs["-S"]
-	if ok {
-		if sock != "" {
-			GlobalArgs["-S"] = sock
-		}
-	}
-
 	_, _, err := Tmux(GlobalArgs, "kill-server", map[string]string{}, "")
 
 	if err != nil {
 		log.Println(err)
-	}
-
-	if ok {
-		GlobalArgs["-S"] = tempSock
 	}
 }
 
