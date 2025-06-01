@@ -2,6 +2,7 @@ package lib
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -75,6 +76,12 @@ func KillServer(sock string) {
 	if err != nil {
 		log.Println(err)
 	}
+}
+
+// Check if sock exists
+func SockExists(sock string) bool {
+	_, err := os.Stat(sock)
+	return err != nil && errors.Is(err, os.ErrNotExist)
 }
 
 // SockHasAttached returns true if a client is attached to the sock or the

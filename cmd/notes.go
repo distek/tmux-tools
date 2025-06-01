@@ -57,13 +57,30 @@ var notesCmd = &cobra.Command{
 			}
 		}
 
-		if lib.SockActive(sockPath) {
-			if globalSockSpecified {
-				lib.GlobalArgs["-S"] = globalSock
-			}
+		if !lib.SockExists(sockPath) {
+			if lib.SockActive(sockPath) {
+				if globalSockSpecified {
+					lib.GlobalArgs["-S"] = globalSock
+				}
 
-			if lib.SockHasAttached(sockPath) {
-				o, e, err := lib.Tmux(map[string]string{"-S": sockPath}, "detach", nil, "")
+				if lib.SockHasAttached(sockPath) {
+					o, e, err := lib.Tmux(map[string]string{"-S": sockPath}, "detach", nil, "")
+					if err != nil {
+						fmt.Println(o)
+						fmt.Println(e)
+						log.Fatal(err)
+					}
+
+					return
+				}
+
+				o, e, err := lib.Tmux(lib.GlobalArgs, "popup", map[string]string{
+					"-E": "",
+					"-x": flagNotesX,
+					"-y": flagNotesY,
+					"-w": flagNotesW,
+					"-h": flagNotesH,
+				}, fmt.Sprintf("tmux -S %s a -t 0", sockPath))
 				if err != nil {
 					fmt.Println(o)
 					fmt.Println(e)
@@ -72,21 +89,6 @@ var notesCmd = &cobra.Command{
 
 				return
 			}
-
-			o, e, err := lib.Tmux(lib.GlobalArgs, "popup", map[string]string{
-				"-E": "",
-				"-x": flagNotesX,
-				"-y": flagNotesY,
-				"-w": flagNotesW,
-				"-h": flagNotesH,
-			}, fmt.Sprintf("tmux -S %s a -t 0", sockPath))
-			if err != nil {
-				fmt.Println(o)
-				fmt.Println(e)
-				log.Fatal(err)
-			}
-
-			return
 		}
 
 		o, e, err := lib.Tmux(map[string]string{"-S": sockPath, "-f": "/dev/null"}, "new", map[string]string{"-d": ""},
