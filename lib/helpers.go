@@ -61,7 +61,15 @@ func Tmux(args map[string]string, cmd string, cmdArgs map[string]string, trailin
 // KillServer kills the server at sock or the current server if sock is
 // an empty string
 func KillServer(sock string) {
+	tempSock, ok := GlobalArgs["-S"]
+	if sock != "" {
+		GlobalArgs["-S"] = sock
+	}
 	_, _, err := Tmux(GlobalArgs, "kill-server", map[string]string{}, "")
+
+	if ok {
+		GlobalArgs["-S"] = tempSock
+	}
 
 	if err != nil {
 		log.Println(err)
@@ -71,21 +79,9 @@ func KillServer(sock string) {
 // SockHasAttached returns true if a client is attached to the sock or the
 // current socket if sock is an empty string
 func SockHasAttached(sock string) bool {
-	tempSock, ok := GlobalArgs["-S"]
-	if ok {
-		if sock != "" {
-			GlobalArgs["-S"] = sock
-		}
-	}
-
-	o, _, err := Tmux(GlobalArgs, "ls", map[string]string{
+	o, _, err := Tmux(map[string]string{"-S": sock}, "ls", map[string]string{
 		"-F": "\"#{session_attached}\"",
 	}, "")
-
-	if ok {
-		GlobalArgs["-S"] = tempSock
-	}
-
 	if err != nil {
 		log.Println(err)
 		return false
@@ -99,7 +95,8 @@ func SockHasAttached(sock string) bool {
 }
 
 func SockActive(sock string) bool {
-	_, e, _ := Tmux(GlobalArgs, "ls", nil, "")
+	_, e, _ := Tmux(map[string]string{"-S": sock}, "ls", nil, "")
+
 	return !strings.HasPrefix(e, "no server running on")
 }
 
