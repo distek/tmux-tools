@@ -97,6 +97,21 @@ Focus pane in a given direction:
 
 `tmux-tools focus-pane {left | bottom | top | right}`
 
+### notes
+
+Pane-directory-local notes popup window
+
+```
+# How I use it (top right corner of tmux window):
+bind-key -n M-n run-shell "~/.local/bin/tmux-tools notes -Y S -X $(tmux display-message -p '#{e|+|:#{window_width},#{e|-|:0,#{popup_width}}}')"
+```
+
+In the event that the parent directory has a `worktrees` dir, it will use the parent's path to keep track of the notes instead.
+
+The notes are saved to `$HOME/.local/share/tmux-tools/notes/`
+
+So, for example, if I'm in the tmux-tools project directory, it would save to `$HOME/.local/share/tmux-tools/notes/\#path\#to\#tmux-tools.md`
+
 ## TODO
 
 - [ ] Standardize logging (style/formatting) across the tool
