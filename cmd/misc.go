@@ -59,7 +59,7 @@ var focusPaneCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		p, err := lib.GetCurrentPane()
+		p, err := lib.GetCurrentPane("")
 		if err != nil {
 			log.Fatal(err)
 		}

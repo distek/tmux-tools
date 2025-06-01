@@ -27,7 +27,7 @@ var notesCmd = &cobra.Command{
 
 		globalSock, globalSockSpecified := lib.GlobalArgs["-S"]
 
-		p, err := lib.GetCurrentPane()
+		p, err := lib.GetCurrentPane("")
 		if err != nil {
 			log.Fatal(err)
 		}

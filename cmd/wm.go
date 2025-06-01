@@ -72,7 +72,7 @@ func splitFull(pane lib.Pane, dir string) {
 		log.Fatal(err)
 	}
 
-	newPane, err := lib.GetCurrentPane()
+	newPane, err := lib.GetCurrentPane("")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -128,7 +128,7 @@ func moveWindowInDir(dir string) {
 		os.Exit(panesLen)
 	}
 
-	currPane, err := lib.GetCurrentPane()
+	currPane, err := lib.GetCurrentPane("")
 	if err != nil {
 		log.Fatalf("GetCurrentPane: %s", err)
 	}

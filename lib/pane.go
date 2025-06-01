@@ -8,20 +8,27 @@ import (
 	"strings"
 )
 
+type PaneMode string
+
+const (
+	PaneModeCopyMode PaneMode = "copy-mode"
+)
+
 type Pane struct {
-	ID     string `json:"id"`
-	Index  int    `json:"index"`
-	Width  int    `json:"width"`
-	Height int    `json:"height"`
-	Active bool   `json:"active"`
-	Cwd    string `json:"cwd"`
-	TtyFd  string `json:"ttyfd"`
-	PID    int    `json:"pid"`
+	Index       int      `json:"index"`
+	Width       int      `json:"width"`
+	PID         int      `json:"pid"`
+	Height      int      `json:"height"`
+	Active      bool     `json:"active"`
+	ID          string   `json:"id"`
+	Cwd         string   `json:"cwd"`
+	TtyFd       string   `json:"ttyfd"`
+	CurrentMode PaneMode `json:"currentMode"`
 }
 
 var (
-	paneFmtLine      = "\"#{pane_id},#{pane_tty},#{pane_pid},#{pane_index},#{pane_width},#{pane_height},#{pane_active},#{pane_current_path}\""
-	paneEmtpyFmtLine = ",,,,,,,"
+	paneFmtLine      = "\"#{pane_id},#{pane_tty},#{pane_pid},#{pane_index},#{pane_width},#{pane_height},#{pane_active},#{pane_current_path},#{pane_mode}\""
+	paneEmtpyFmtLine = ",,,,,,,,"
 )
 
 func parsePaneLine(line string) (Pane, error) {
@@ -30,7 +37,7 @@ func parsePaneLine(line string) (Pane, error) {
 
 	split := strings.Split(line, ",")
 
-	if len(split) != 8 {
+	if len(split) != 9 {
 		return Pane{}, fmt.Errorf("lib: parsePaneLine: strings.Split: split: split length != 7: line=%s", line)
 	}
 
@@ -69,6 +76,7 @@ func parsePaneLine(line string) (Pane, error) {
 	// cwd
 	pane.Cwd = split[7]
 
+	pane.CurrentMode = PaneMode(split[8])
 	return pane, nil
 }
 
@@ -128,7 +136,7 @@ func getNeighborDirs(pane Pane) map[string]bool {
 }
 
 func GetPaneInDir(pane Pane, dir string) (Pane, bool, error) {
-	currPane, err := GetCurrentPane()
+	currPane, err := GetCurrentPane("")
 	if err != nil {
 		return Pane{}, false, fmt.Errorf("lib: GetPaneInDir: getCurrentPane: ... : %s", err)
 	}
@@ -191,11 +199,17 @@ func GetPaneInDir(pane Pane, dir string) (Pane, bool, error) {
 	return ret, true, err
 }
 
-func GetCurrentPane() (Pane, error) {
-	o, e, err := Tmux(GlobalArgs, "display-message", map[string]string{
+func GetCurrentPane(target string) (Pane, error) {
+	args := map[string]string{
 		"-p": "",
 		"-F": paneFmtLine,
-	}, "")
+	}
+
+	if target != "" {
+		args["-t"] = target
+	}
+
+	o, e, err := Tmux(GlobalArgs, "display-message", args, "")
 	if err != nil {
 		log.Println(e)
 		return Pane{}, err
