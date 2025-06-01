@@ -136,7 +136,11 @@ var nestCmd = &cobra.Command{
 		log.SetOutput(f)
 
 		if lib.SockActive(flagTmuxSockPath) {
-			c := exec.Command("tmux", "-S", flagTmuxSockPath, "new-session")
+			cmdArgs := []string{"-S", flagTmuxSockPath, "new-session"}
+			if len(args) != 0 {
+				cmdArgs = append(cmdArgs, args...)
+			}
+			c := exec.Command("tmux", cmdArgs...)
 			c.Stdin = os.Stdin
 			c.Stdout = os.Stdout
 			c.Stderr = os.Stderr
@@ -149,7 +153,11 @@ var nestCmd = &cobra.Command{
 			return
 		}
 
-		c := exec.Command("tmux", "-S", flagTmuxSockPath, "-f", flagNestConfig)
+		cmdArgs := []string{"-S", flagTmuxSockPath, "-f", flagNestConfig}
+		if len(args) != 0 {
+			cmdArgs = append(cmdArgs, args...)
+		}
+		c := exec.Command("tmux", cmdArgs...)
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
