@@ -71,7 +71,7 @@ Save session as provided name:
 
 `tmux-tools sessions save --name <name>`
 
-Load session by provided name:
+Load session by provid resied name:
 
 `tmux-tools sessions load --name <name>`
 
@@ -113,6 +113,20 @@ In the event that the parent directory has a `worktrees` dir, it will use the pa
 The notes are saved to `$HOME/.local/share/tmux-tools/notes/`
 
 So, for example, if I'm in the tmux-tools project directory, it would save to `$HOME/.local/share/tmux-tools/notes/\#path\#to\#tmux-tools.md`
+
+---
+
+### `copy-numbers`
+
+Add relative line numbers to the left of a pane that has entered copy mode
+
+Add this to config:
+
+```
+set-hook -g "pane-mode-changed" "run '~/.local/bin/tmux-tools copy-numbers'"
+```
+
+Things get weird if you resize or split the pane it's referencing, so like, don't do that? Might fix later
 
 ## TODO
 
