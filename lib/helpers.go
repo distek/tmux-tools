@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
@@ -184,4 +185,37 @@ func Fzf(list []string) (string, error) {
 		return "", err
 	}
 	return strings.TrimSpace(result.String()), nil
+}
+
+func DirUp(path string) (string, error) {
+	oldDir := os.Getenv("PWD")
+
+	f, err := os.Stat(path)
+	if err != nil {
+		return "", err
+	}
+
+	if !f.IsDir() {
+		return "", fmt.Errorf("path is not a directory: %s", path)
+	}
+
+	err = os.Chdir(fmt.Sprintf("%s/..", path))
+	if err != nil {
+		return "", err
+	}
+
+	os.Chdir(oldDir)
+
+	return filepath.Dir(path), nil
+}
+
+func IsGitWorktree(path string) bool {
+	worktreesPath := filepath.Join(path, "worktrees")
+
+	info, err := os.Stat(worktreesPath)
+	if err != nil {
+		return false
+	}
+
+	return info.IsDir()
 }

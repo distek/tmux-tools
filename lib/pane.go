@@ -14,13 +14,14 @@ type Pane struct {
 	Width  int    `json:"width"`
 	Height int    `json:"height"`
 	Active bool   `json:"active"`
+	Cwd    string `json:"cwd"`
 	TtyFd  string `json:"ttyfd"`
 	PID    int    `json:"pid"`
 }
 
 var (
-	paneFmtLine      = "\"#{pane_id},#{pane_tty},#{pane_pid},#{pane_index},#{pane_width},#{pane_height},#{pane_active}\""
-	paneEmtpyFmtLine = ",,,,,,"
+	paneFmtLine      = "\"#{pane_id},#{pane_tty},#{pane_pid},#{pane_index},#{pane_width},#{pane_height},#{pane_active},#{pane_current_path}\""
+	paneEmtpyFmtLine = ",,,,,,,"
 )
 
 func parsePaneLine(line string) (Pane, error) {
@@ -29,7 +30,7 @@ func parsePaneLine(line string) (Pane, error) {
 
 	split := strings.Split(line, ",")
 
-	if len(split) != 7 {
+	if len(split) != 8 {
 		return Pane{}, fmt.Errorf("lib: parsePaneLine: strings.Split: split: split length != 7: line=%s", line)
 	}
 
@@ -65,6 +66,9 @@ func parsePaneLine(line string) (Pane, error) {
 
 	pane.Active = split[6] == "1"
 
+	// cwd
+	pane.Cwd = split[7]
+
 	return pane, nil
 }
 
@@ -78,7 +82,6 @@ func GetPanes() ([]Pane, error) {
 	o, e, err := Tmux(GlobalArgs, "list-panes", map[string]string{
 		"-F": paneFmtLine,
 	}, "")
-
 	if err != nil {
 		return nil, fmt.Errorf("%s: %s", err.Error(), e)
 	}
@@ -193,7 +196,6 @@ func GetCurrentPane() (Pane, error) {
 		"-p": "",
 		"-F": paneFmtLine,
 	}, "")
-
 	if err != nil {
 		log.Println(e)
 		return Pane{}, err

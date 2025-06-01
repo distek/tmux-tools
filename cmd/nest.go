@@ -37,7 +37,7 @@ func nestGetDefault() string {
 		log.Fatal(err)
 	}
 
-	err = os.MkdirAll(fmt.Sprintf(tempDir+"/tmux-tools/nested/%s", fileInfo.Name()), 0700)
+	err = os.MkdirAll(fmt.Sprintf(tempDir+"/tmux-tools/nested/%s", fileInfo.Name()), 0o700)
 	if err != nil {
 		log.Fatal(err)
 	}
