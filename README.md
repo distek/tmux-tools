@@ -97,7 +97,9 @@ Focus pane in a given direction:
 
 `tmux-tools focus-pane {left | bottom | top | right}`
 
-### notes
+---
+
+### `notes`
 
 Pane-directory-local notes popup window
 
