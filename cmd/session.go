@@ -60,10 +60,19 @@ var sessionSaveCmd = &cobra.Command{
 	Use:   "save",
 	Short: "save a session",
 	Run: func(cmd *cobra.Command, args []string) {
-
 		if flagSessionName == "" {
 			fmt.Print("Session name: ")
-			fmt.Scanln(&flagSessionName)
+			_, err := fmt.Scanln(&flagSessionName)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		if _, err := os.Stat(flagSessionsDir); err != nil {
+			err := os.MkdirAll(flagSessionsDir, 0750)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 
 		if flagSessionName == "" {
@@ -83,7 +92,7 @@ var sessionSaveCmd = &cobra.Command{
 
 		session.Name = flagSessionName
 
-		for _, w := range strings.Split(winLines, "\n") {
+		for w := range strings.SplitSeq(winLines, "\n") {
 			if w == "" || w == sessionEmtpyWinLineFmt {
 				continue
 			}
@@ -95,8 +104,6 @@ var sessionSaveCmd = &cobra.Command{
 			if err != nil {
 				log.Fatal(err)
 			}
-
-			thisWin.Name = winSplit[1]
 
 			thisWin.Layout = winSplit[2]
 
@@ -111,7 +118,8 @@ var sessionSaveCmd = &cobra.Command{
 				log.Fatal(err)
 			}
 
-			for _, p := range strings.Split(paneLines, "\n") {
+			focused := false
+			for p := range strings.SplitSeq(paneLines, "\n") {
 				if p == "" || p == sessionEmtpyPaneLineFmt {
 					continue
 				}
@@ -155,8 +163,20 @@ var sessionSaveCmd = &cobra.Command{
 				thisPane.Path = paneSplit[2]
 
 				thisPane.Current = lib.TmuxBool(paneSplit[3])
+				if thisPane.Current {
+					// If the name of the window is the same as the currently focused command
+					// we'll leave it blank and let tmux pick the name. Otherwise, the user has
+					// likely chosen this window's name on purpose
+					if strings.HasPrefix(thisPane.Command, winSplit[1]) {
+						focused = true
+					}
+				}
 
 				thisWin.Panes = append(thisWin.Panes, thisPane)
+			}
+
+			if !focused {
+				thisWin.Name = winSplit[1]
 			}
 
 			session.Windows = append(session.Windows, thisWin)
@@ -168,7 +188,7 @@ var sessionSaveCmd = &cobra.Command{
 		}
 
 		err = os.WriteFile(
-			xdg.ConfigHome+"/tmux/sessions/"+flagSessionName+".json",
+			flagSessionsDir+"/"+flagSessionName+".json",
 			s,
 			0640)
 		if err != nil {
@@ -310,12 +330,14 @@ func sessionCreateWindows(sessName string, windows []SessWin) error {
 		} else {
 			first = false
 
-			_, e, err := lib.Tmux(lib.GlobalArgs, "rename-window", map[string]string{
-				"-t": target,
-			}, w.Name)
-			if err != nil {
-				log.Println(e)
-				return err
+			if w.Name != "" {
+				_, e, err := lib.Tmux(lib.GlobalArgs, "rename-window", map[string]string{
+					"-t": target,
+				}, w.Name)
+				if err != nil {
+					log.Println(e)
+					return err
+				}
 			}
 		}
 
@@ -412,7 +434,7 @@ func init() {
 	rootCmd.AddCommand(sessionCmd)
 
 	sessionCmd.PersistentFlags().StringVarP(&flagSessionName, "name", "n", "", "name of session to save/load")
-	sessionCmd.PersistentFlags().StringVarP(&flagSessionsDir, "dir", "d", xdg.ConfigHome+"/tmux/sessions", "directory to save/load sessions from")
+	sessionCmd.PersistentFlags().StringVarP(&flagSessionsDir, "dir", "d", xdg.ConfigHome+"/tmux-tools/sessions", "directory to save/load sessions from")
 
 	sessionCmd.AddCommand(sessionSaveCmd)
 

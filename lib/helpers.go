@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -132,27 +133,38 @@ func GetProcCmd(pid int) (string, error) {
 
 	switch runtime.GOOS {
 	case "linux":
-		out, err = exec.Command("ps", "--no-headers", "-o", "command", "--ppid", fmt.Sprint(pid)).CombinedOutput()
+		out, err = exec.Command("ps", "--no-headers", "-o", "command", "--ppid", fmt.Sprintf("%d", pid)).CombinedOutput()
 		if err != nil {
 			return "", err
 		}
 	case "darwin":
-		// TODO: Darwin needs testing
-		// It wouldn't if they could just use modern tools
-		// Like, you'll innovate on silcon design, making the fastest consumer-avaialble ARM chip
-		// But the bash binary you ship is from 2007.
-		out, err = exec.Command("pgrep", "-P", fmt.Sprint(pid)).CombinedOutput()
+		outPre, err := exec.Command("ps", "-o", "ppid=,command=").CombinedOutput()
 		if err != nil {
-			if err.Error() == "exit status 1" {
-				// try ps
-				out, err = exec.Command("ps", "-o", "command", "-p", fmt.Sprint(pid)).CombinedOutput()
-				if err != nil {
-					return "", err
-				}
-			} else {
-				return "", err
+			return "", err
+		}
+
+		for v := range strings.SplitSeq(string(outPre), "\n") {
+			split := strings.SplitN(strings.TrimSpace(v), " ", 2)
+			if len(split) != 2 {
+				continue
+			}
+
+			if split[1] == "" {
+				continue
+			}
+
+			ppid, err := strconv.Atoi(split[0])
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+
+			if ppid == pid {
+				out = []byte(split[1])
+				break
 			}
 		}
+
 	}
 
 	return strings.TrimSuffix(string(out), "\n"), nil
