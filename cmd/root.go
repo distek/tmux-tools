@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/distek/tmux-tools/lib"
@@ -12,13 +13,22 @@ var (
 	flagConfigFile   string
 	flagTmuxSockName string
 	flagTmuxSockPath string
+	flagVersion      bool
+
+	version string
 )
 
 var rootCmd = &cobra.Command{
 	Use:   "tmux-tools",
 	Short: "Tools for simplifying the manipulation of tmux",
 	Long:  `For more info on flags denoted with "See tmux docs", check tmux's man page`,
-	// Run:   func(cmd *cobra.Command, args []string) {},
+	PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		if flagVersion {
+			fmt.Printf("tmux-tools - %s", version)
+			os.Exit(0)
+		}
+	},
+	Run: func(cmd *cobra.Command, args []string) { _ = cmd.Usage() },
 }
 
 func Execute() {
@@ -60,6 +70,8 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVar(&flagConfigFile, "config", "", "config file (default: $HOME/.config/tmux/tools/tmux-tools.yaml)")
+
+	rootCmd.PersistentFlags().BoolVarP(&flagVersion, "version", "v", false, "Print version and exit")
 
 	rootCmd.PersistentFlags().StringVarP(&flagTmuxSockPath, "socket-path", "S", "", "tmux socket path (See tmux docs)")
 	rootCmd.PersistentFlags().StringVarP(&flagTmuxSockName, "socket-name", "L", "", "tmux socket name (See tmux docs)")

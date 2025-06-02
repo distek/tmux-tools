@@ -1,0 +1,25 @@
+version: 2
+before:
+  hooks:
+    - go mod tidy
+builds:
+  - id: build
+    binary: "tmux-tools"
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/distek/tmux-tools/cmd.version={{.Version}}
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+github_urls:
+  api: https://github.com/api/v3/
+  upload: https://github.com/api/uploads/
+  download: https://github.com/
+
+checksum:
+  name_template: "checksums.txt"
